@@ -1,10 +1,14 @@
-import axios from 'axios';
+import axios, { AxiosInstance } from 'axios';
 
-const api = axios.create({ baseURL: 'http://localhost:5000/api' });
+const api: AxiosInstance = axios.create({
+  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5000/api',
+});
 
 api.interceptors.request.use(cfg => {
   const token = localStorage.getItem('erp_token');
-  if (token) cfg.headers.Authorization = `Bearer ${token}`;
+  if (token && cfg.headers) {
+    cfg.headers.Authorization = `Bearer ${token}`;
+  }
   return cfg;
 });
 
