@@ -1,10 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 
 export default function Login() {
-  const { login }  = useAuth();
   const navigate   = useNavigate();
   const [email,    setEmail]    = useState('admin@shop.com');
   const [password, setPassword] = useState('Admin@123');
@@ -13,12 +11,15 @@ export default function Login() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
-    try {
-      await login(email, password);
+
+    // ── Mock login (remove when backend is ready) ──
+    await new Promise(r => setTimeout(r, 800));
+
+    if (email === 'admin@shop.com' && password === 'Admin@123') {
+      localStorage.setItem('erp_token', 'mock-token-123');
       navigate('/dashboard');
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Login failed');
-    } finally {
+    } else {
+      toast.error('Invalid credentials');
       setBusy(false);
     }
   };
@@ -63,7 +64,9 @@ export default function Login() {
                 onChange={e => setPassword(e.target.value)}
               />
             </div>
-            <button className="btn-primary w-full justify-center" disabled={busy}>
+            <button
+              className="btn-primary w-full justify-center"
+              disabled={busy}>
               {busy ? 'Signing in…' : 'Sign In'}
             </button>
           </form>
