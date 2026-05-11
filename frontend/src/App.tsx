@@ -1,7 +1,11 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import Layout   from './components/layout/Layout';
-import Login    from './pages/Login';
+import Layout     from './components/layout/Layout';
+import Login      from './pages/Login';
+import Dashboard  from './pages/Dashboard';
+import Customers  from './pages/Customers';
+import Categories from './pages/Categories';
+import Suppliers  from './pages/Suppliers';
 
 function Guard({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -19,8 +23,12 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/" element={<Guard><Layout /></Guard>}>
-          <Route index element={<Navigate to="/dashboard" replace />} />
-          {/* Pages come next */}
+          <Route index        element={<Navigate to="/dashboard" replace />} />
+          <Route path="dashboard"  element={<Dashboard />} />
+          <Route path="customers"  element={<Customers />} />
+          <Route path="categories" element={<Categories />} />
+          <Route path="suppliers"  element={<Suppliers />} />
+          {/* Products + Sales — coming next */}
         </Route>
       </Routes>
     </AuthProvider>
