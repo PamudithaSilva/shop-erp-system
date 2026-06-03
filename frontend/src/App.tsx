@@ -7,6 +7,7 @@ import Customers  from './pages/Customers';
 import Categories from './pages/Categories';
 import Suppliers  from './pages/Suppliers';
 import Products from './pages/Products';
+import Sales from './pages/Sales';
 
 function Guard({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -30,7 +31,7 @@ export default function App() {
           <Route path="categories" element={<Categories />} />
           <Route path="suppliers"  element={<Suppliers />} />
           <Route path="products"   element={<Products />} />
-          {/* Sales — coming next */}
+          <Route path="sales"      element={<Sales />} />
         </Route>
       </Routes>
     </AuthProvider>
