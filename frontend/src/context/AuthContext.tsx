@@ -1,8 +1,8 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import api from '../utils/api';
 
 interface User {
-  id: string;
+  _id: string;
   name: string;
   email: string;
   role: 'admin' | 'staff';
@@ -11,31 +11,41 @@ interface User {
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<User>;
+  login: (email: string, password: string) => Promise<void>;
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user,    setUser]    = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-  const token = localStorage.getItem('erp_token');
-  if (token) {
-    setUser({ id: '1', name: 'Admin User', email: 'admin@shop.com', role: 'admin' });
-  }
-  setLoading(false);
-}, []);
+    const token = localStorage.getItem('erp_token');
+    if (!token) {
+      setLoading(false);
+      return;
+    }
 
-  const login = async (email: string, password: string): Promise<User> => {
-    const { data } = await api.post<{ token: string; user: User }>(
-      '/auth/login', { email, password }
-    );
-    localStorage.setItem('erp_token', data.token);
-    setUser(data.user);
-    return data.user;
+    api.get('/auth/me')
+      .then(res => setUser(res.data))
+      .catch(() => {
+        localStorage.removeItem('erp_token');
+        setUser(null);
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  const login = async (email: string, password: string) => {
+    const res = await api.post('/auth/login', { email, password });
+    localStorage.setItem('erp_token', res.data.token);
+    setUser({
+      _id: res.data._id,
+      name: res.data.name,
+      email: res.data.email,
+      role: res.data.role,
+    });
   };
 
   const logout = () => {
