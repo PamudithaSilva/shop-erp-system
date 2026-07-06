@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import dotenv from 'dotenv';
 import connectDB from './config/db';
 import authRoutes from './routes/auth';
+import productRoutes from "./routes/productRoutes";
 
 dotenv.config();
 
@@ -13,6 +14,7 @@ const PORT = process.env.PORT || 5000;
 app.use(helmet());
 app.use(cors({ origin: 'http://localhost:3000', credentials: true }));
 app.use(express.json());
+app.use("/api/products", productRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'Shop ERP API is running!' });
