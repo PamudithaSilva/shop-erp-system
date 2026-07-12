@@ -50,7 +50,7 @@ export default function Layout() {
           <Logo />
           <div>
             <p className="font-semibold text-gray-900 text-sm leading-tight">Shop ERP</p>
-            <p className="text-xs text-gray-400">Mini System</p>
+            <p className="text-xs text-gray-400">Inventory &amp; Sales</p>
           </div>
         </div>
 

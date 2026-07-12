@@ -15,12 +15,7 @@ export default function Categories() {
   const [modal,  setModal]  = useState(false);
 
   const load = () => api.get<Category[]>('/categories').then(r => setData(r.data));
-  useEffect(() => {
-  setData([
-    { _id: '1', name: 'Electronics', description: 'Electronic items'   },
-    { _id: '2', name: 'Groceries',   description: 'Food and beverages' },
-  ]);
-}, []);
+  useEffect(() => { load().catch(() => toast.error('Could not load categories')); }, []);
 
   const openAdd  = ()             => { setForm(EMPTY); setEditId(null); setModal(true); };
   const openEdit = (c: Category)  => { setForm(c); setEditId(c._id); setModal(true); };

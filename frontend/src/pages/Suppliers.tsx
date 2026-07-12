@@ -22,12 +22,7 @@ export default function Suppliers() {
   const [modal,  setModal]  = useState(false);
 
   const load = () => api.get<Supplier[]>('/suppliers').then(r => setData(r.data));
-  useEffect(() => {
-  setData([
-    { _id: '1', name: 'ABC Traders',   email: 'abc@trade.com', phone: '011-2345678' },
-    { _id: '2', name: 'XYZ Wholesale', email: 'xyz@whole.com', phone: '011-8765432' },
-  ]);
-}, [])
+  useEffect(() => { load().catch(() => toast.error('Could not load suppliers')); }, []);
 
   const openAdd  = ()              => { setForm(EMPTY); setEditId(null); setModal(true); };
   const openEdit = (s: Supplier)   => { setForm(s); setEditId(s._id); setModal(true); };

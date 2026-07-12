@@ -18,12 +18,7 @@ export default function Customers() {
   const [modal,  setModal]  = useState(false);
 
   const load = () => api.get<Customer[]>('/customers').then(r => setData(r.data));
-  useEffect(() => {
-  setData([
-    { _id: '1', name: 'John Silva',   email: 'john@email.com',  phone: '071-1234567' },
-    { _id: '2', name: 'Mary Perera',  email: 'mary@email.com',  phone: '077-9876543' },
-  ]);
-}, []);
+  useEffect(() => { load().catch(() => toast.error('Could not load customers')); }, []);
 
   const openAdd  = ()           => { setForm(EMPTY); setEditId(null); setModal(true); };
   const openEdit = (c: Customer)=> { setForm(c);     setEditId(c._id); setModal(true); };

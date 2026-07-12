@@ -3,10 +3,18 @@ import jwt from 'jsonwebtoken';
 import User from '../models/User';
 import { AuthRequest } from '../middleware/auth';
 
+const getJwtSecret = (): string => {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error('JWT_SECRET is not configured');
+  }
+  return secret;
+};
+
 const signToken = (id: string): string => {
   return jwt.sign(
     { id },
-    process.env.JWT_SECRET as string,
+    getJwtSecret(),
     { expiresIn: process.env.JWT_EXPIRES_IN || '7d' } as jwt.SignOptions
   );
 };

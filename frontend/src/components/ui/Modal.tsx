@@ -24,6 +24,7 @@ export default function Modal({ title, onClose, children, size = 'md' }: ModalPr
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <h2 className="font-semibold text-gray-900">{title}</h2>
           <button
+            type="button"
             onClick={onClose}
             className="p-1 rounded hover:bg-gray-100 text-gray-400">
             <XMarkIcon className="w-5 h-5" />

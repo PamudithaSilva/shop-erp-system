@@ -35,7 +35,7 @@ export default function Login() {
               <circle cx="22" cy="20" r="3" fill="white" />
             </svg>
             <div>
-              <h1 className="text-lg font-bold text-gray-900">Mini Shop ERP</h1>
+              <h1 className="text-lg font-bold text-gray-900">Shop ERP</h1>
               <p className="text-xs text-gray-400">Inventory + Sales</p>
             </div>
           </div>

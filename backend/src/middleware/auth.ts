@@ -10,6 +10,14 @@ interface JwtPayload {
   id: string;
 }
 
+const getJwtSecret = (): string => {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error('JWT_SECRET is not configured');
+  }
+  return secret;
+};
+
 export const protect = async (
   req: AuthRequest,
   res: Response,
@@ -24,10 +32,7 @@ export const protect = async (
     }
 
     const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET as string
-    ) as JwtPayload;
+    const decoded = jwt.verify(token, getJwtSecret()) as JwtPayload;
 
     const user = await User.findById(decoded.id).select('-password');
 

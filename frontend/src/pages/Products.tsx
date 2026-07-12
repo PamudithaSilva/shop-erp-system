@@ -1,10 +1,19 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
 import {
-  PlusIcon, PencilIcon, TrashIcon,
-  AdjustmentsHorizontalIcon
+  PlusIcon,
+  PencilIcon,
+  TrashIcon,
+  AdjustmentsHorizontalIcon,
 } from '@heroicons/react/24/outline';
-import Modal from '../components/ui/Modal';
 import toast from 'react-hot-toast';
+import api from '../utils/api';
+import Modal from '../components/ui/Modal';
+import { useAuth } from '../context/AuthContext';
+
+interface Category {
+  _id: string;
+  name: string;
+}
 
 interface Product {
   _id: string;
@@ -15,253 +24,360 @@ interface Product {
   stock: number;
   minStock: number;
   unit: string;
-  category?: { name: string };
+  category?: Category;
+  supplier?: Category;
   description?: string;
 }
 
-const MOCK_PRODUCTS: Product[] = [
-  { _id:'1', name:'Wireless Mouse',     sku:'WM-001', price:2500,  costPrice:1800, stock:45,  minStock:10, unit:'pcs', category:{ name:'Electronics' } },
-  { _id:'2', name:'USB Keyboard',       sku:'UK-002', price:3200,  costPrice:2200, stock:8,   minStock:10, unit:'pcs', category:{ name:'Electronics' } },
-  { _id:'3', name:'A4 Paper Ream',      sku:'AP-003', price:950,   costPrice:700,  stock:120, minStock:20, unit:'pcs', category:{ name:'Stationery'  } },
-  { _id:'4', name:'HDMI Cable 2m',      sku:'HC-004', price:1200,  costPrice:800,  stock:3,   minStock:5,  unit:'pcs', category:{ name:'Electronics' } },
-  { _id:'5', name:'Ballpoint Pen Pack', sku:'BP-005', price:350,   costPrice:200,  stock:80,  minStock:15, unit:'pcs', category:{ name:'Stationery'  } },
-];
+interface ProductFormState {
+  name: string;
+  sku: string;
+  price: string;
+  costPrice: string;
+  stock: string;
+  minStock: string;
+  unit: string;
+  description: string;
+  category: string;
+  supplier: string;
+}
 
-const EMPTY = {
-  name:'', sku:'', price:'', costPrice:'',
-  stock:'0', minStock:'5', unit:'pcs', description:''
+const EMPTY_FORM: ProductFormState = {
+  name: '',
+  sku: '',
+  price: '',
+  costPrice: '',
+  stock: '0',
+  minStock: '5',
+  unit: 'pcs',
+  description: '',
+  category: '',
+  supplier: '',
 };
 
 export default function Products() {
+  const { user } = useAuth();
+  const canManageProducts = user?.role === 'admin';
+
   const [products, setProducts] = useState<Product[]>([]);
-  const [form,     setForm]     = useState(EMPTY);
-  const [editId,   setEditId]   = useState<string | null>(null);
-  const [modal,    setModal]    = useState<'form' | 'stock' | null>(null);
-  const [search,   setSearch]   = useState('');
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [suppliers, setSuppliers] = useState<Category[]>([]);
+  const [form, setForm] = useState<ProductFormState>(EMPTY_FORM);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [modal, setModal] = useState<'form' | 'stock' | null>(null);
+  const [search, setSearch] = useState('');
   const [stockAdj, setStockAdj] = useState(0);
-  const [stockId,  setStockId]  = useState<string | null>(null);
+  const [stockId, setStockId] = useState<string | null>(null);
+
+  const load = async () => {
+    const [productRes, categoryRes, supplierRes] = await Promise.all([
+      api.get<{ success: boolean; data: Product[] }>('/products'),
+      api.get<Category[]>('/categories'),
+      api.get<Category[]>('/suppliers'),
+    ]);
+
+    setProducts(productRes.data.data);
+    setCategories(categoryRes.data);
+    setSuppliers(supplierRes.data);
+  };
 
   useEffect(() => {
-    // TODO: replace with api.get('/products') when backend ready
-    setProducts(MOCK_PRODUCTS);
+    load().catch(() => toast.error('Could not load inventory'));
   }, []);
 
-  const filtered = products.filter(p =>
-    p.name.toLowerCase().includes(search.toLowerCase()) ||
-    (p.sku?.toLowerCase().includes(search.toLowerCase()))
+  const filtered = products.filter(
+    (product) =>
+      product.name.toLowerCase().includes(search.toLowerCase()) ||
+      product.sku?.toLowerCase().includes(search.toLowerCase())
   );
 
-  const openAdd  = () => { setForm(EMPTY); setEditId(null); setModal('form'); };
-  const openEdit = (p: Product) => {
-    setForm({
-      name: p.name, sku: p.sku || '',
-      price: String(p.price), costPrice: String(p.costPrice || ''),
-      stock: String(p.stock), minStock: String(p.minStock),
-      unit: p.unit, description: p.description || ''
-    });
-    setEditId(p._id);
+  const updateField =
+    (key: keyof ProductFormState) =>
+    (event: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+      setForm((current) => ({ ...current, [key]: event.target.value }));
+    };
+
+  const openAdd = () => {
+    if (!canManageProducts) return;
+    setForm(EMPTY_FORM);
+    setEditId(null);
     setModal('form');
   };
-  const openStock = (p: Product) => {
-    setStockId(p._id); setStockAdj(0); setModal('stock');
+
+  const openEdit = (product: Product) => {
+    if (!canManageProducts) return;
+    setForm({
+      name: product.name,
+      sku: product.sku || '',
+      price: String(product.price),
+      costPrice: product.costPrice != null ? String(product.costPrice) : '',
+      stock: String(product.stock),
+      minStock: String(product.minStock),
+      unit: product.unit,
+      description: product.description || '',
+      category: product.category?._id || '',
+      supplier: product.supplier?._id || '',
+    });
+    setEditId(product._id);
+    setModal('form');
   };
 
-  const f = (k: string) => (e: React.ChangeEvent<HTMLInputElement>) =>
-    setForm(p => ({ ...p, [k]: e.target.value }));
+  const save = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
 
-  const save = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (editId) {
-      setProducts(prev => prev.map(p =>
-        p._id === editId ? {
-          ...p, name: form.name, sku: form.sku,
-          price: Number(form.price), costPrice: Number(form.costPrice),
-          stock: Number(form.stock), minStock: Number(form.minStock),
-          unit: form.unit, description: form.description
-        } : p
-      ));
-      toast.success('Product updated!');
-    } else {
-      const newProduct: Product = {
-        _id: Date.now().toString(),
-        name: form.name, sku: form.sku,
-        price: Number(form.price), costPrice: Number(form.costPrice),
-        stock: Number(form.stock), minStock: Number(form.minStock),
-        unit: form.unit, description: form.description
-      };
-      setProducts(prev => [...prev, newProduct]);
-      toast.success('Product added!');
+    if (!canManageProducts) {
+      toast.error('You do not have permission to modify products');
+      return;
     }
-    setModal(null);
+
+    try {
+      const payload = {
+        ...form,
+        price: Number(form.price),
+        costPrice: Number(form.costPrice || 0),
+        stock: Number(form.stock),
+        minStock: Number(form.minStock),
+        category: form.category || undefined,
+        supplier: form.supplier || undefined,
+      };
+
+      if (editId) {
+        await api.put(`/products/${editId}`, payload);
+      } else {
+        await api.post('/products', payload);
+      }
+
+      toast.success(editId ? 'Product updated' : 'Product added');
+      setModal(null);
+      await load();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Could not save product');
+    }
   };
 
-  const remove = (id: string) => {
-    if (!window.confirm('Delete this product?')) return;
-    setProducts(prev => prev.filter(p => p._id !== id));
-    toast.success('Deleted!');
+  const remove = async (id: string) => {
+    if (!canManageProducts) {
+      toast.error('You do not have permission to deactivate products');
+      return;
+    }
+
+    if (!window.confirm('Deactivate this product?')) return;
+
+    try {
+      await api.delete(`/products/${id}`);
+      toast.success('Product deactivated');
+      await load();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Could not delete product');
+    }
   };
 
-  const adjustStock = () => {
-    setProducts(prev => prev.map(p =>
-      p._id === stockId
-        ? { ...p, stock: Math.max(0, p.stock + Number(stockAdj)) }
-        : p
-    ));
-    toast.success('Stock updated!');
-    setModal(null);
+  const adjustStock = async () => {
+    if (!canManageProducts) {
+      toast.error('You do not have permission to adjust stock');
+      return;
+    }
+
+    const product = products.find((item) => item._id === stockId);
+    if (!product) return;
+
+    const nextStock = product.stock + Number(stockAdj);
+    if (nextStock < 0) {
+      toast.error('Stock cannot be negative');
+      return;
+    }
+
+    try {
+      await api.put(`/products/${stockId}`, { stock: nextStock });
+      toast.success('Stock updated');
+      setModal(null);
+      await load();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Could not update stock');
+    }
   };
+
+  const closeModal = () => setModal(null);
 
   return (
     <div className="p-6 space-y-4">
-
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-gray-900">Products</h1>
-        <button className="btn-primary" onClick={openAdd}>
-          <PlusIcon className="w-4 h-4"/> Add Product
-        </button>
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-bold text-gray-900">Products</h1>
+          {!canManageProducts && (
+            <p className="text-xs text-gray-400">Read-only access for staff users</p>
+          )}
+        </div>
+        {canManageProducts && (
+          <button className="btn-primary" onClick={openAdd}>
+            <PlusIcon className="w-4 h-4" />
+            Add Product
+          </button>
+        )}
       </div>
 
-      {/* Search */}
       <input
         className="input max-w-xs"
-        placeholder="Search by name or SKU…"
+        placeholder="Search by name or SKU..."
         value={search}
-        onChange={e => setSearch(e.target.value)}
+        onChange={(event) => setSearch(event.target.value)}
       />
 
-      {/* Table */}
       <div className="card p-0 overflow-hidden">
         <table className="w-full">
           <thead className="border-b border-gray-100 bg-gray-50">
             <tr>
-              {['Name','SKU','Price','Cost','Stock','Category',''].map(h =>
-                <th key={h} className="th">{h}</th>
-              )}
+              <th className="th">Name</th>
+              <th className="th">SKU</th>
+              <th className="th">Price</th>
+              <th className="th">Cost</th>
+              <th className="th">Stock</th>
+              <th className="th">Category</th>
+              {canManageProducts && <th className="th" />}
             </tr>
           </thead>
           <tbody>
-            {filtered.length === 0 && (
-              <tr><td colSpan={7} className="td text-center text-gray-400 py-10">
-                No products found
-              </td></tr>
-            )}
-            {filtered.map(p => (
-              <tr key={p._id} className="tr">
-                <td className="td font-medium text-gray-900">{p.name}</td>
-                <td className="td font-mono text-xs text-gray-400">{p.sku || '—'}</td>
-                <td className="td">LKR {p.price.toLocaleString()}</td>
-                <td className="td text-gray-400">LKR {(p.costPrice || 0).toLocaleString()}</td>
-                <td className="td">
-                  <span className={`badge ${p.stock <= p.minStock ? 'badge-red' : 'badge-green'}`}>
-                    {p.stock} {p.unit}
-                  </span>
-                </td>
-                <td className="td text-gray-500">{p.category?.name || '—'}</td>
-                <td className="td">
-                  <div className="flex gap-1 justify-end">
-                    <button onClick={() => openStock(p)}
-                      className="p-1.5 rounded hover:bg-amber-50 text-amber-500"
-                      title="Adjust stock">
-                      <AdjustmentsHorizontalIcon className="w-4 h-4"/>
-                    </button>
-                    <button onClick={() => openEdit(p)}
-                      className="p-1.5 rounded hover:bg-blue-50 text-blue-400"
-                      title="Edit">
-                      <PencilIcon className="w-4 h-4"/>
-                    </button>
-                    <button onClick={() => remove(p._id)}
-                      className="p-1.5 rounded hover:bg-red-50 text-red-400"
-                      title="Delete">
-                      <TrashIcon className="w-4 h-4"/>
-                    </button>
-                  </div>
+            {filtered.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={canManageProducts ? 7 : 6}
+                  className="td text-center text-gray-400 py-10"
+                >
+                  No products found
                 </td>
               </tr>
-            ))}
+            ) : (
+              filtered.map((product) => (
+                <tr key={product._id} className="tr">
+                  <td className="td font-medium">{product.name}</td>
+                  <td className="td font-mono text-xs text-gray-400">{product.sku || '—'}</td>
+                  <td className="td">LKR {product.price.toLocaleString()}</td>
+                  <td className="td text-gray-400">LKR {(product.costPrice || 0).toLocaleString()}</td>
+                  <td className="td">
+                    <span className={`badge ${product.stock <= product.minStock ? 'badge-red' : 'badge-green'}`}>
+                      {product.stock} {product.unit}
+                    </span>
+                  </td>
+                  <td className="td text-gray-500">{product.category?.name || '—'}</td>
+                  {canManageProducts && (
+                    <td className="td">
+                      <div className="flex gap-1 justify-end">
+                        <button
+                          onClick={() => {
+                            setStockId(product._id);
+                            setStockAdj(0);
+                            setModal('stock');
+                          }}
+                          className="p-1.5 text-amber-500"
+                        >
+                          <AdjustmentsHorizontalIcon className="w-4 h-4" />
+                        </button>
+                        <button onClick={() => openEdit(product)} className="p-1.5 text-blue-400">
+                          <PencilIcon className="w-4 h-4" />
+                        </button>
+                        <button onClick={() => remove(product._id)} className="p-1.5 text-red-400">
+                          <TrashIcon className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  )}
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
 
-      {/* Add/Edit Modal */}
-      {modal === 'form' && (
-        <Modal
-          title={editId ? 'Edit Product' : 'Add Product'}
-          onClose={() => setModal(null)}
-          size="lg">
+      {canManageProducts && modal === 'form' && (
+        <Modal title={editId ? 'Edit Product' : 'Add Product'} onClose={closeModal} size="lg">
           <form onSubmit={save} className="grid grid-cols-2 gap-3">
             <div className="col-span-2">
-              <label className="label">Name <span className="text-red-400">*</span></label>
-              <input className="input" value={form.name} onChange={f('name')} required/>
+              <label className="label">Name *</label>
+              <input className="input" value={form.name} onChange={updateField('name')} required />
             </div>
             <div>
               <label className="label">SKU</label>
-              <input className="input" value={form.sku} onChange={f('sku')}/>
+              <input className="input" value={form.sku} onChange={updateField('sku')} />
+            </div>
+            {(['price', 'costPrice', 'stock', 'minStock', 'unit'] as const).map((key) => (
+              <div key={key}>
+                <label className="label">
+                  {key === 'costPrice' ? 'Cost Price' : key[0].toUpperCase() + key.slice(1)}
+                  {key === 'price' && ' *'}
+                </label>
+                <input
+                  className="input"
+                  value={form[key]}
+                  onChange={updateField(key)}
+                  required={key === 'price'}
+                />
+              </div>
+            ))}
+            <div>
+              <label className="label">Category</label>
+              <select className="input" value={form.category} onChange={updateField('category')}>
+                <option value="">None</option>
+                {categories.map((category) => (
+                  <option key={category._id} value={category._id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
             </div>
             <div>
-              <label className="label">Unit</label>
-              <input className="input" value={form.unit} onChange={f('unit')}/>
-            </div>
-            <div>
-              <label className="label">Selling Price <span className="text-red-400">*</span></label>
-              <input className="input" type="number" value={form.price} onChange={f('price')} required/>
-            </div>
-            <div>
-              <label className="label">Cost Price</label>
-              <input className="input" type="number" value={form.costPrice} onChange={f('costPrice')}/>
-            </div>
-            <div>
-              <label className="label">Stock</label>
-              <input className="input" type="number" value={form.stock} onChange={f('stock')}/>
-            </div>
-            <div>
-              <label className="label">Min Stock</label>
-              <input className="input" type="number" value={form.minStock} onChange={f('minStock')}/>
+              <label className="label">Supplier</label>
+              <select className="input" value={form.supplier} onChange={updateField('supplier')}>
+                <option value="">None</option>
+                {suppliers.map((supplier) => (
+                  <option key={supplier._id} value={supplier._id}>
+                    {supplier.name}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="col-span-2">
               <label className="label">Description</label>
-              <input className="input" value={form.description} onChange={f('description')}/>
+              <textarea
+                className="input min-h-[90px]"
+                value={form.description}
+                onChange={updateField('description')}
+              />
             </div>
-            <div className="col-span-2 flex gap-2 pt-1">
-              <button type="submit" className="btn-primary flex-1 justify-center">
-                Save Product
-              </button>
-              <button type="button" className="btn-ghost flex-1 justify-center"
-                onClick={() => setModal(null)}>
+            <div className="col-span-2 flex justify-end gap-2 mt-2">
+              <button type="button" className="btn-ghost" onClick={closeModal}>
                 Cancel
+              </button>
+              <button type="submit" className="btn-primary">
+                Save
               </button>
             </div>
           </form>
         </Modal>
       )}
 
-      {/* Stock Adjust Modal */}
-      {modal === 'stock' && (
-        <Modal title="Adjust Stock" onClose={() => setModal(null)} size="sm">
-          <div className="space-y-4">
-            <p className="text-sm text-gray-500">
-              Enter <span className="font-medium text-green-600">positive</span> to add stock,{' '}
-              <span className="font-medium text-red-500">negative</span> to remove.
-            </p>
+      {canManageProducts && modal === 'stock' && (
+        <Modal title="Adjust Stock" onClose={closeModal} size="sm">
+          <div className="space-y-3">
             <div>
-              <label className="label">Adjustment</label>
+              <label className="label">Change by</label>
               <input
-                className="input" type="number"
+                type="number"
+                className="input"
                 value={stockAdj}
-                onChange={e => setStockAdj(Number(e.target.value))}
+                onChange={(event) => setStockAdj(Number(event.target.value))}
               />
             </div>
             <div className="flex gap-2">
-              <button className="btn-primary flex-1 justify-center" onClick={adjustStock}>
+              <button type="button" className="btn-primary flex-1 justify-center" onClick={adjustStock}>
                 Apply
               </button>
-              <button className="btn-ghost flex-1 justify-center" onClick={() => setModal(null)}>
+              <button type="button" className="btn-ghost flex-1 justify-center" onClick={closeModal}>
                 Cancel
               </button>
             </div>
           </div>
         </Modal>
       )}
-
     </div>
   );
 }
