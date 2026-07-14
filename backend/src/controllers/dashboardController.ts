@@ -3,7 +3,7 @@ import Product from '../models/Product'; import Customer from '../models/Custome
 import { catchAsync } from '../utils/catchAsync';
 export const getStats = catchAsync(async (_req, res: Response) => {
   const now = new Date(); const monthStart = new Date(now.getFullYear(), now.getMonth(), 1); const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
-  const [totalProducts, totalCustomers, totalSales, lowStockCount, revenue, monthRevenue, monthlySales, recentSales] = await Promise.all([
+  const [totalProducts, totalCustomers, totalSales, lowStockCount, revenue, monthRevenue, monthlySales, recentSales, inventoryValue] = await Promise.all([
     Product.countDocuments({ isActive: true }), Customer.countDocuments(), Sale.countDocuments({ status: 'completed' }), Product.countDocuments({ isActive: true, $expr: { $lte: ['$stock', '$minStock'] } }),
     Sale.aggregate([{ $match: { status: 'completed' } }, { $group: { _id: null, total: { $sum: '$totalAmount' } } }]),
     Sale.aggregate([{ $match: { status: 'completed', createdAt: { $gte: monthStart } } }, { $group: { _id: null, total: { $sum: '$totalAmount' } } }]),
@@ -23,6 +23,17 @@ export const getStats = catchAsync(async (_req, res: Response) => {
       { $project: { _id: '$_id.label', revenue: 1 } },
     ]),
     Sale.find().populate('customer', 'name').sort({ createdAt: -1 }).limit(5),
+    Product.aggregate([
+      { $match: { isActive: true } },
+      {
+        $group: {
+          _id: null,
+          total: {
+            $sum: { $multiply: ['$stock', { $ifNull: ['$costPrice', 0] }] }
+          }
+        }
+      }
+    ]),
   ]);
-  res.json({ totalProducts, totalCustomers, totalSales, lowStockCount, totalRevenue: revenue[0]?.total || 0, monthRevenue: monthRevenue[0]?.total || 0, monthlySales, recentSales });
+  res.json({ totalProducts, totalCustomers, totalSales, lowStockCount, totalRevenue: revenue[0]?.total || 0, monthRevenue: monthRevenue[0]?.total || 0, monthlySales, recentSales, inventoryValue: inventoryValue[0]?.total || 0 });
 });
