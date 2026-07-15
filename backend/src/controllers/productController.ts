@@ -8,7 +8,32 @@ export const createProduct = catchAsync(async (req: Request, res: Response) => {
 });
 
 export const getProducts = catchAsync(async (req: Request, res: Response) => {
-  const products = await Product.find({ isActive: true })
+  const { search, category, supplier, lowStock, sort } = req.query;
+
+  const query: Record<string, unknown> = { isActive: true };
+
+  if (typeof search === 'string' && search.trim()) {
+    const term = search.trim();
+    query.$or = [
+      { name: { $regex: term, $options: 'i' } },
+      { sku: { $regex: term, $options: 'i' } }
+    ];
+  }
+
+  if (typeof category === 'string' && category.trim()) {
+    query.category = category;
+  }
+
+  if (typeof supplier === 'string' && supplier.trim()) {
+    query.supplier = supplier;
+  }
+
+  if (lowStock === 'true') {
+    query.$expr = { $lte: ['$stock', '$minStock'] };
+  }
+
+  const products = await Product.find(query)
+    .sort(typeof sort === 'string' && sort.trim() ? sort : '-createdAt')
     .populate("category", "name")
     .populate("supplier", "name");
   res.status(200).json({ success: true, data: products });
