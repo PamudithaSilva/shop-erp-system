@@ -8,6 +8,7 @@ export interface AuthRequest extends Request {
 
 interface JwtPayload {
   id: string;
+  role: string;
 }
 
 const getJwtSecret = (): string => {
