@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import User from '../models/User';
 import { AuthRequest } from '../middleware/auth';
+import { IUser } from '../models/User';
 
 const getJwtSecret = (): string => {
   const secret = process.env.JWT_SECRET;
@@ -11,9 +12,9 @@ const getJwtSecret = (): string => {
   return secret;
 };
 
-const signToken = (id: string): string => {
+const signToken = (user: IUser): string => {
   return jwt.sign(
-    { id },
+    { id: user._id, role: user.role },
     getJwtSecret(),
     { expiresIn: process.env.JWT_EXPIRES_IN || '7d' } as jwt.SignOptions
   );
@@ -36,7 +37,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       name: user.name,
       email: user.email,
       role: user.role,
-      token: signToken(String(user._id)),
+      token: signToken(user),
     });
   } catch (error) {
     res.status(500).json({ message: 'Register failed', error });
@@ -58,7 +59,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       name: user.name,
       email: user.email,
       role: user.role,
-      token: signToken(String(user._id)),
+      token: signToken(user),
     });
   } catch (error) {
     res.status(500).json({ message: 'Login failed', error });
