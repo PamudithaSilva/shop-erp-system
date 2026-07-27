@@ -10,6 +10,7 @@ import customerRoutes from './routes/customerRoutes';
 import supplierRoutes from './routes/supplierRoutes';
 import saleRoutes from './routes/saleRoutes';
 import dashboardRoutes from './routes/dashboardRoutes';
+import inventoryMovementRoutes from './routes/inventoryMovementRoutes';
 import { ensureAdminUser } from './config/seedAdmin';
 
 dotenv.config();
@@ -36,6 +37,7 @@ app.use('/api/customers', customerRoutes);
 app.use('/api/suppliers', supplierRoutes);
 app.use('/api/sales', saleRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/inventory-movements', inventoryMovementRoutes);
 
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error(err);
