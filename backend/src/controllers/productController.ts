@@ -1,13 +1,26 @@
-import { Request, Response } from "express";
+import { Response } from "express";
 import Product from "../models/Product";
+import InventoryMovement from '../models/InventoryMovement';
+import { AuthRequest } from '../middleware/auth';
 import { catchAsync } from "../utils/catchAsync";
 
-export const createProduct = catchAsync(async (req: Request, res: Response) => {
+export const createProduct = catchAsync(async (req: AuthRequest, res: Response) => {
   const product = await Product.create(req.body);
+  if (product.stock > 0) {
+    await InventoryMovement.create({
+      product: product._id,
+      type: 'opening_balance',
+      quantityChange: product.stock,
+      stockBefore: 0,
+      stockAfter: product.stock,
+      note: 'Opening stock when product was created',
+      createdBy: req.user!._id,
+    });
+  }
   res.status(201).json({ success: true, data: product });
 });
 
-export const getProducts = catchAsync(async (req: Request, res: Response) => {
+export const getProducts = catchAsync(async (req: AuthRequest, res: Response) => {
   const { search, category, supplier, lowStock, sort } = req.query;
 
   const query: Record<string, unknown> = { isActive: true };
@@ -39,7 +52,7 @@ export const getProducts = catchAsync(async (req: Request, res: Response) => {
   res.status(200).json({ success: true, data: products });
 });
 
-export const getProductById = catchAsync(async (req: Request, res: Response) => {
+export const getProductById = catchAsync(async (req: AuthRequest, res: Response) => {
   const product = await Product.findById(req.params.id)
     .populate("category", "name")
     .populate("supplier", "name");
@@ -50,19 +63,37 @@ export const getProductById = catchAsync(async (req: Request, res: Response) => 
   res.status(200).json({ success: true, data: product });
 });
 
-export const updateProduct = catchAsync(async (req: Request, res: Response) => {
-  const product = await Product.findByIdAndUpdate(req.params.id, req.body, {
-    new: true,
-    runValidators: true
-  });
+export const updateProduct = catchAsync(async (req: AuthRequest, res: Response) => {
+  const product = await Product.findById(req.params.id);
 
   if (!product) {
     return res.status(404).json({ success: false, message: "Product not found" });
   }
+
+  const stockBefore = product.stock;
+  const requestedStock = req.body.stock;
+  if (requestedStock !== undefined && (!Number.isFinite(Number(requestedStock)) || Number(requestedStock) < 0)) {
+    return res.status(400).json({ success: false, message: 'Stock must be a non-negative number' });
+  }
+
+  product.set(req.body);
+  await product.save();
+
+  if (requestedStock !== undefined && product.stock !== stockBefore) {
+    await InventoryMovement.create({
+      product: product._id,
+      type: 'adjustment',
+      quantityChange: product.stock - stockBefore,
+      stockBefore,
+      stockAfter: product.stock,
+      note: 'Manual stock adjustment',
+      createdBy: req.user!._id,
+    });
+  }
   res.status(200).json({ success: true, data: product });
 });
 
-export const deleteProduct = catchAsync(async (req: Request, res: Response) => {
+export const deleteProduct = catchAsync(async (req: AuthRequest, res: Response) => {
   const product = await Product.findByIdAndUpdate(
     req.params.id,
     { isActive: false },
@@ -75,7 +106,7 @@ export const deleteProduct = catchAsync(async (req: Request, res: Response) => {
   res.status(200).json({ success: true, message: "Product deactivated" });
 });
 
-export const getLowStockProducts = catchAsync(async (_req: Request, res: Response) => {
+export const getLowStockProducts = catchAsync(async (_req: AuthRequest, res: Response) => {
   const products = await Product.find({
     isActive: true,
     $expr: { $lte: ["$stock", "$minStock"] }
