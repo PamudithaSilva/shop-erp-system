@@ -20,7 +20,7 @@ const ProductSchema = new Schema<IProduct>({
   description: { type: String, default: '' },
   price:       { type: Number, required: true, min: 0 },
   costPrice:   { type: Number, default: 0 },
-  stock:       { type: Number, default: 0 },
+  stock:       { type: Number, default: 0, min: 0 },
   minStock:    { type: Number, default: 5 },
   unit:        { type: String, default: 'pcs' },
   category:    { type: Schema.Types.ObjectId, ref: 'Category' },
