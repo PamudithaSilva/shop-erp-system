@@ -11,7 +11,7 @@ interface User {
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string, role?: User['role']) => Promise<User>;
   logout: () => void;
 }
 
@@ -37,15 +37,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .finally(() => setLoading(false));
   }, []);
 
-  const login = async (email: string, password: string) => {
-    const res = await api.post('/auth/login', { email, password });
-    localStorage.setItem('erp_token', res.data.token);
-    setUser({
+  const login = async (email: string, password: string, role?: User['role']) => {
+    const res = await api.post('/auth/login', { email, password, role });
+    const authenticatedUser: User = {
       _id: res.data._id,
       name: res.data.name,
       email: res.data.email,
       role: res.data.role,
-    });
+    };
+    localStorage.setItem('erp_token', res.data.token);
+    setUser(authenticatedUser);
+    return authenticatedUser;
   };
 
   const logout = () => {
