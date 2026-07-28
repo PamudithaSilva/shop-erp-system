@@ -46,11 +46,18 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 
 export const login = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { email, password } = req.body;
+    const { email, password, role } = req.body;
 
     const user = await User.findOne({ email });
     if (!user || !(await user.comparePassword(password))) {
       res.status(401).json({ message: 'Invalid credentials' });
+      return;
+    }
+
+    if (role && role !== user.role) {
+      res.status(403).json({
+        message: role === 'admin' ? 'Admin access only' : 'Please use the Admin Login tab for this account',
+      });
       return;
     }
 
