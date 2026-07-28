@@ -4,6 +4,7 @@ import {
   PencilIcon,
   TrashIcon,
   AdjustmentsHorizontalIcon,
+  ClockIcon,
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import api from '../utils/api';
@@ -42,6 +43,17 @@ interface ProductFormState {
   supplier: string;
 }
 
+interface InventoryMovement {
+  _id: string;
+  type: 'opening_balance' | 'sale' | 'refund' | 'adjustment';
+  quantityChange: number;
+  stockBefore: number;
+  stockAfter: number;
+  note?: string;
+  createdAt: string;
+  createdBy?: { name: string };
+}
+
 const EMPTY_FORM: ProductFormState = {
   name: '',
   sku: '',
@@ -64,10 +76,13 @@ export default function Products() {
   const [suppliers, setSuppliers] = useState<Category[]>([]);
   const [form, setForm] = useState<ProductFormState>(EMPTY_FORM);
   const [editId, setEditId] = useState<string | null>(null);
-  const [modal, setModal] = useState<'form' | 'stock' | null>(null);
+  const [modal, setModal] = useState<'form' | 'stock' | 'history' | null>(null);
   const [search, setSearch] = useState('');
   const [stockAdj, setStockAdj] = useState(0);
   const [stockId, setStockId] = useState<string | null>(null);
+  const [historyProduct, setHistoryProduct] = useState<Product | null>(null);
+  const [movements, setMovements] = useState<InventoryMovement[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   const load = async () => {
     const [productRes, categoryRes, supplierRes] = await Promise.all([
@@ -197,6 +212,23 @@ export default function Products() {
     }
   };
 
+  const openHistory = async (product: Product) => {
+    setHistoryProduct(product);
+    setMovements([]);
+    setHistoryLoading(true);
+    setModal('history');
+    try {
+      const response = await api.get<{ success: boolean; data: InventoryMovement[] }>(
+        `/inventory-movements?product=${product._id}`
+      );
+      setMovements(response.data.data);
+    } catch {
+      toast.error('Could not load stock history');
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
   const closeModal = () => setModal(null);
 
   return (
@@ -254,9 +286,16 @@ export default function Products() {
                   <td className="td">LKR {product.price.toLocaleString()}</td>
                   <td className="td text-gray-400">LKR {(product.costPrice || 0).toLocaleString()}</td>
                   <td className="td">
-                    <span className={`badge ${product.stock <= product.minStock ? 'badge-red' : 'badge-green'}`}>
-                      {product.stock} {product.unit}
-                    </span>
+                    <button
+                      onClick={() => openHistory(product)}
+                      title="View stock history"
+                      className="inline-flex items-center gap-1 hover:opacity-75"
+                    >
+                      <span className={`badge ${product.stock <= product.minStock ? 'badge-red' : 'badge-green'}`}>
+                        {product.stock} {product.unit}
+                      </span>
+                      <ClockIcon className="w-3.5 h-3.5 text-gray-400" />
+                    </button>
                   </td>
                   <td className="td text-gray-500">{product.category?.name || '—'}</td>
                   {canManageProducts && (
@@ -376,6 +415,45 @@ export default function Products() {
               </button>
             </div>
           </div>
+        </Modal>
+      )}
+
+      {modal === 'history' && historyProduct && (
+        <Modal title={`Stock History — ${historyProduct.name}`} onClose={closeModal} size="lg">
+          {historyLoading ? (
+            <p className="text-sm text-gray-400 text-center py-6">Loading history…</p>
+          ) : movements.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-6">No stock movements recorded yet.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="border-b border-gray-100 text-left text-xs text-gray-400">
+                  <tr>
+                    <th className="py-2 pr-3">Date</th>
+                    <th className="py-2 pr-3">Type</th>
+                    <th className="py-2 pr-3">Change</th>
+                    <th className="py-2 pr-3">Stock</th>
+                    <th className="py-2">By</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {movements.map((movement) => (
+                    <tr key={movement._id} className="border-b border-gray-50">
+                      <td className="py-2.5 pr-3 text-gray-500 whitespace-nowrap">
+                        {new Date(movement.createdAt).toLocaleString()}
+                      </td>
+                      <td className="py-2.5 pr-3 capitalize">{movement.type.replace('_', ' ')}</td>
+                      <td className={`py-2.5 pr-3 font-medium ${movement.quantityChange > 0 ? 'text-green-600' : 'text-red-500'}`}>
+                        {movement.quantityChange > 0 ? '+' : ''}{movement.quantityChange}
+                      </td>
+                      <td className="py-2.5 pr-3 text-gray-600">{movement.stockBefore} → {movement.stockAfter}</td>
+                      <td className="py-2.5 text-gray-500">{movement.createdBy?.name || 'System'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </Modal>
       )}
     </div>
