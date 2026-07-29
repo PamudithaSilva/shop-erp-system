@@ -4,10 +4,11 @@ module.exports = {
     extend: {
       colors: {
         primary: {
-          DEFAULT: '#01696f',
-          hover:   '#0c4e54',
-          light:   '#cedcd8',
-          faint:   '#eaf2f1',
+          DEFAULT: '#245fa9',
+          hover:   '#1b4b8b',
+          light:   '#d9e8fb',
+          faint:   '#eef5ff',
+          dark:    '#183867',
         }
       },
       fontFamily: { sans: ['Inter', 'sans-serif'] }
