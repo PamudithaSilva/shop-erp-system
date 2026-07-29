@@ -19,14 +19,14 @@ export default function Modal({ title, onClose, children, size = 'md' }: ModalPr
       className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
       onClick={onClose}>
       <div
-        className={`bg-white rounded-xl shadow-xl w-full ${widths[size]} max-h-[90vh] overflow-y-auto`}
+        className={`bg-white rounded-2xl shadow-[0_20px_50px_rgba(24,56,103,0.22)] w-full ${widths[size]} max-h-[90vh] overflow-y-auto`}
         onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-          <h2 className="font-semibold text-gray-900">{title}</h2>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+          <h2 className="font-semibold text-primary-dark">{title}</h2>
           <button
             type="button"
             onClick={onClose}
-            className="p-1 rounded hover:bg-gray-100 text-gray-400">
+            className="p-1 rounded-lg hover:bg-primary-faint text-slate-400 hover:text-primary">
             <XMarkIcon className="w-5 h-5" />
           </button>
         </div>
