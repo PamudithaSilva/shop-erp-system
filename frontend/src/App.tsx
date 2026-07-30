@@ -1,13 +1,15 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import Layout     from './components/layout/Layout';
-import Login      from './pages/Login';
-import Dashboard  from './pages/Dashboard';
-import Customers  from './pages/Customers';
-import Categories from './pages/Categories';
-import Suppliers  from './pages/Suppliers';
-import Products from './pages/Products';
-import Sales from './pages/Sales';
+import Layout        from './components/layout/Layout';
+import Login         from './pages/Login';
+import Dashboard     from './pages/Dashboard';
+import Customers     from './pages/Customers';
+import Categories    from './pages/Categories';
+import Suppliers     from './pages/Suppliers';
+import Products      from './pages/Products';
+import Sales         from './pages/Sales';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword  from './pages/ResetPassword';
 
 function Guard({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -23,7 +25,9 @@ export default function App() {
   return (
     <AuthProvider>
       <Routes>
-        <Route path="/login" element={<Login />} />
+        <Route path="/login"           element={<Login />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password"  element={<ResetPassword />} />
         <Route path="/" element={<Guard><Layout /></Guard>}>
           <Route index        element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard"  element={<Dashboard />} />
