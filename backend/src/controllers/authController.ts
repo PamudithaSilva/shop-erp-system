@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import User from '../models/User';
 import { AuthRequest } from '../middleware/auth';
 import { IUser } from '../models/User';
+import { generateResetToken, hashToken } from '../utils/token';
 
 const getJwtSecret = (): string => {
   const secret = process.env.JWT_SECRET;
@@ -85,4 +86,92 @@ export const me = async (req: AuthRequest, res: Response): Promise<void> => {
     email: req.user.email,
     role: req.user.role,
   });
+};
+
+// ─── Password Reset ───────────────────────────────────────────────────────────
+
+/**
+ * POST /api/auth/forgot-password
+ * Body: { email }
+ *
+ * Generates a reset token, saves the SHA-256 hash to the user document,
+ * and returns the raw token in the response (dev mode).
+ * In production, send the token via email instead.
+ */
+export const forgotPassword = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      res.status(400).json({ message: 'Email is required' });
+      return;
+    }
+
+    const user = await User.findOne({ email });
+    // Always return 200 to avoid user-enumeration attacks
+    if (!user) {
+      res.json({ message: 'If that email exists, a reset token has been generated.' });
+      return;
+    }
+
+    const { rawToken, hashedToken } = generateResetToken();
+
+    user.resetPasswordToken   = hashedToken;
+    user.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    await user.save({ validateBeforeSave: false });
+
+    console.log(`[DEV] Password reset token for ${email}: ${rawToken}`);
+
+    res.json({
+      message: 'Reset token generated successfully.',
+      // ⚠️  Remove `resetToken` from the response in production — send via email instead.
+      resetToken: rawToken,
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Could not generate reset token', error });
+  }
+};
+
+/**
+ * POST /api/auth/reset-password
+ * Body: { token, password }
+ *
+ * Validates the raw token against the stored hash, checks expiry,
+ * updates the password, and clears the reset fields.
+ */
+export const resetPassword = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { token, password } = req.body;
+
+    if (!token || !password) {
+      res.status(400).json({ message: 'Token and new password are required' });
+      return;
+    }
+
+    if (password.length < 6) {
+      res.status(400).json({ message: 'Password must be at least 6 characters' });
+      return;
+    }
+
+    const hashedToken = hashToken(token);
+
+    const user = await User.findOne({
+      resetPasswordToken:   hashedToken,
+      resetPasswordExpires: { $gt: new Date() },
+    });
+
+    if (!user) {
+      res.status(400).json({ message: 'Invalid or expired reset token' });
+      return;
+    }
+
+    user.password             = password;
+    user.resetPasswordToken   = undefined;
+    user.resetPasswordExpires = undefined;
+    await user.save();
+
+    res.json({ message: 'Password has been reset successfully. You can now log in.' });
+  } catch (error) {
+    res.status(500).json({ message: 'Could not reset password', error });
+  }
 };
