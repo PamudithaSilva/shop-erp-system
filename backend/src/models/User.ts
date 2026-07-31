@@ -2,20 +2,24 @@ import mongoose, { Document, Schema } from 'mongoose';
 import bcrypt from 'bcryptjs';
 
 export interface IUser extends Document {
-  name:      string;
-  email:     string;
-  password:  string;
-  role:      'admin' | 'staff';
-  isActive:  boolean;
+  name:                  string;
+  email:                 string;
+  password:              string;
+  role:                  'admin' | 'staff';
+  isActive:              boolean;
+  resetPasswordToken?:   string;
+  resetPasswordExpires?: Date;
   comparePassword(password: string): Promise<boolean>;
 }
 
 const UserSchema = new Schema<IUser>({
-  name:     { type: String, required: true, trim: true },
-  email:    { type: String, required: true, unique: true, lowercase: true },
-  password: { type: String, required: true, minlength: 6 },
-  role:     { type: String, enum: ['admin', 'staff'], default: 'staff' },
-  isActive: { type: Boolean, default: true },
+  name:                  { type: String, required: true, trim: true },
+  email:                 { type: String, required: true, unique: true, lowercase: true },
+  password:              { type: String, required: true, minlength: 6 },
+  role:                  { type: String, enum: ['admin', 'staff'], default: 'staff' },
+  isActive:              { type: Boolean, default: true },
+  resetPasswordToken:    { type: String },
+  resetPasswordExpires:  { type: Date },
 }, { timestamps: true });
 
 // Hash password before saving
