@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 
@@ -128,6 +128,17 @@ export default function Login() {
                     </button>
                   </div>
                 </div>
+
+                {/* Forgot password link */}
+                <div className="flex justify-end">
+                  <Link
+                    to="/forgot-password"
+                    className="text-xs font-medium text-primary transition hover:text-primary-dark hover:underline"
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
+
                 <button
                   className="mt-2 flex w-full justify-center rounded-xl bg-gradient-to-r from-primary-dark to-primary px-4 py-3 text-sm font-bold text-white shadow-[0_7px_14px_rgba(36,95,169,0.26)] transition hover:-translate-y-0.5 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60"
                   disabled={busy}
