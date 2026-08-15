@@ -2,9 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { EnvelopeIcon, KeyIcon, ArrowLeftIcon, ClipboardDocumentIcon, CheckIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
-import axios from 'axios';
-
-const API = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+import api from '../utils/api';
 
 export default function ForgotPassword() {
   const [email, setEmail]         = useState('');
@@ -16,7 +14,7 @@ export default function ForgotPassword() {
     e.preventDefault();
     setBusy(true);
     try {
-      const { data } = await axios.post(`${API}/auth/forgot-password`, { email });
+      const { data } = await api.post('/auth/forgot-password', { email });
       setResetToken(data.resetToken ?? null);
       toast.success('Reset token generated!');
     } catch (err: any) {
@@ -67,7 +65,7 @@ export default function ForgotPassword() {
 
             <h2 className="text-center text-2xl font-bold text-primary-dark">Forgot Password?</h2>
             <p className="mt-2 text-center text-sm text-slate-500">
-              Enter your registered email to receive a password reset token.
+              Enter your registered email to request a password reset.
             </p>
 
             {!resetToken ? (
@@ -120,7 +118,7 @@ export default function ForgotPassword() {
                 <div className="rounded-2xl border border-green-200 bg-green-50 p-4">
                   <p className="mb-1 text-sm font-semibold text-green-800">✅ Token generated!</p>
                   <p className="text-xs text-green-700">
-                    In production this would be sent to your email. For now, copy the token below and use it to reset your password.
+                    Use this development token to reset your password. In production, the token must be delivered by email.
                   </p>
                 </div>
 

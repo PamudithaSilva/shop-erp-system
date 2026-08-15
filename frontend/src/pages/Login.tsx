@@ -10,8 +10,8 @@ export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
   const [mode, setMode] = useState<LoginMode>('admin');
-  const [email, setEmail] = useState('admin@shop.com');
-  const [password, setPassword] = useState('Admin@123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
 

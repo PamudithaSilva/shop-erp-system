@@ -2,9 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { LockClosedIcon, EyeIcon, EyeSlashIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
-import axios from 'axios';
-
-const API = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+import api from '../utils/api';
 
 export default function ResetPassword() {
   const [searchParams]           = useSearchParams();
@@ -38,7 +36,7 @@ export default function ResetPassword() {
 
     setBusy(true);
     try {
-      await axios.post(`${API}/auth/reset-password`, { token, password });
+      await api.post('/auth/reset-password', { token, password });
       setSuccess(true);
       toast.success('Password reset successfully!');
     } catch (err: any) {
