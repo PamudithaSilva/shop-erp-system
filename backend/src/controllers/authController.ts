@@ -25,13 +25,14 @@ export const register = async (req: Request, res: Response): Promise<void> => {
   try {
     const { name, email, password, role } = req.body;
 
-    const exists = await User.findOne({ email });
+    const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+    const exists = await User.findOne({ email: normalizedEmail });
     if (exists) {
       res.status(400).json({ message: 'User already exists' });
       return;
     }
 
-    const user = await User.create({ name, email, password, role });
+    const user = await User.create({ name, email: normalizedEmail, password, role });
 
     res.status(201).json({
       _id: user._id,
@@ -41,7 +42,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       token: signToken(user),
     });
   } catch (error) {
-    res.status(500).json({ message: 'Register failed', error });
+    throw error;
   }
 };
 
@@ -49,8 +50,9 @@ export const login = async (req: Request, res: Response): Promise<void> => {
   try {
     const { email, password, role } = req.body;
 
-    const user = await User.findOne({ email });
-    if (!user || !(await user.comparePassword(password))) {
+    const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+    const user = await User.findOne({ email: normalizedEmail });
+    if (!user || !user.isActive || !(await user.comparePassword(password))) {
       res.status(401).json({ message: 'Invalid credentials' });
       return;
     }
@@ -70,7 +72,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       token: signToken(user),
     });
   } catch (error) {
-    res.status(500).json({ message: 'Login failed', error });
+    throw error;
   }
 };
 
@@ -122,13 +124,13 @@ export const forgotPassword = async (req: Request, res: Response): Promise<void>
 
     console.log(`[DEV] Password reset token for ${email}: ${rawToken}`);
 
-    res.json({
+    const response: { message: string; resetToken?: string } = {
       message: 'Reset token generated successfully.',
-      // ⚠️  Remove `resetToken` from the response in production — send via email instead.
-      resetToken: rawToken,
-    });
+    };
+    if (process.env.NODE_ENV !== 'production') response.resetToken = rawToken;
+    res.json(response);
   } catch (error) {
-    res.status(500).json({ message: 'Could not generate reset token', error });
+    throw error;
   }
 };
 
@@ -172,6 +174,6 @@ export const resetPassword = async (req: Request, res: Response): Promise<void> 
 
     res.json({ message: 'Password has been reset successfully. You can now log in.' });
   } catch (error) {
-    res.status(500).json({ message: 'Could not reset password', error });
+    throw error;
   }
 };

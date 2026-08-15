@@ -4,6 +4,17 @@ import InventoryMovement from '../models/InventoryMovement';
 import { AuthRequest } from '../middleware/auth';
 import { catchAsync } from "../utils/catchAsync";
 
+const editableProductFields = [
+  'name', 'sku', 'description', 'price', 'costPrice', 'stock', 'minStock', 'unit', 'category', 'supplier',
+] as const;
+
+const getEditableProductFields = (body: Record<string, unknown>) =>
+  Object.fromEntries(editableProductFields
+    .filter((field) => field in body)
+    .map((field) => [field, body[field]]));
+
+const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 export const createProduct = catchAsync(async (req: AuthRequest, res: Response) => {
   const product = await Product.create(req.body);
   if (product.stock > 0) {
@@ -26,7 +37,7 @@ export const getProducts = catchAsync(async (req: AuthRequest, res: Response) =>
   const query: Record<string, unknown> = { isActive: true };
 
   if (typeof search === 'string' && search.trim()) {
-    const term = search.trim();
+    const term = escapeRegex(search.trim());
     query.$or = [
       { name: { $regex: term, $options: 'i' } },
       { sku: { $regex: term, $options: 'i' } }
@@ -76,7 +87,7 @@ export const updateProduct = catchAsync(async (req: AuthRequest, res: Response) 
     return res.status(400).json({ success: false, message: 'Stock must be a non-negative number' });
   }
 
-  product.set(req.body);
+  product.set(getEditableProductFields(req.body));
   await product.save();
 
   if (requestedStock !== undefined && product.stock !== stockBefore) {

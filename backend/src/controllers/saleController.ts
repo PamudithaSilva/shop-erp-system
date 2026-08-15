@@ -5,6 +5,7 @@ import Product from '../models/Product';
 import InventoryMovement from '../models/InventoryMovement';
 import { AuthRequest } from '../middleware/auth';
 import { catchAsync } from '../utils/catchAsync';
+import { AppError } from '../utils/AppError';
 
 export const listSales = catchAsync(async (_req: AuthRequest, res: Response) => {
   const sales = await Sale.find().populate('customer', 'name').sort({ createdAt: -1 });
@@ -13,7 +14,16 @@ export const listSales = catchAsync(async (_req: AuthRequest, res: Response) => 
 
 export const createSale = catchAsync(async (req: AuthRequest, res: Response) => {
   const { customer, items, discount = 0 } = req.body;
-  if (!Array.isArray(items) || items.length === 0) return res.status(400).json({ message: 'Add at least one item' });
+  if (!Array.isArray(items) || items.length === 0) throw new AppError('Add at least one item');
+
+  const quantitiesByProduct = new Map<string, number>();
+  for (const item of items) {
+    const productId = typeof item?.productId === 'string' ? item.productId : '';
+    const quantity = Number(item?.quantity);
+    if (!mongoose.isObjectIdOrHexString(productId)) throw new AppError('Each sale item must have a valid product');
+    if (!Number.isFinite(quantity) || quantity < 1) throw new AppError('Quantity must be at least 1');
+    quantitiesByProduct.set(productId, (quantitiesByProduct.get(productId) || 0) + quantity);
+  }
   const session = await mongoose.startSession();
   try {
     let sale: any;
@@ -27,12 +37,10 @@ export const createSale = catchAsync(async (req: AuthRequest, res: Response) => 
         stockAfter: number;
         createdBy: mongoose.Types.ObjectId;
       }> = [];
-      for (const item of items) {
-        const quantity = Number(item.quantity);
-        const product = await Product.findOne({ _id: item.productId, isActive: true }).session(session);
-        if (!product) throw new Error('One of the selected products no longer exists');
-        if (!Number.isFinite(quantity) || quantity < 1) throw new Error('Quantity must be at least 1');
-        if (product.stock < quantity) throw new Error(`Insufficient stock for ${product.name}`);
+      for (const [productId, quantity] of quantitiesByProduct) {
+        const product = await Product.findOne({ _id: productId, isActive: true }).session(session);
+        if (!product) throw new AppError('One of the selected products no longer exists', 404);
+        if (product.stock < quantity) throw new AppError(`Insufficient stock for ${product.name}`);
         const stockBefore = product.stock;
         product.stock -= quantity;
         await product.save({ session });
@@ -48,7 +56,7 @@ export const createSale = catchAsync(async (req: AuthRequest, res: Response) => 
       }
       const subtotal = normalizedItems.reduce((total, item) => total + item.total, 0);
       const numericDiscount = Number(discount) || 0;
-      if (numericDiscount < 0 || numericDiscount > subtotal) throw new Error('Discount must be between zero and the subtotal');
+      if (!Number.isFinite(numericDiscount) || numericDiscount < 0 || numericDiscount > subtotal) throw new AppError('Discount must be between zero and the subtotal');
       [sale] = await Sale.create([{ customer: customer || undefined, items: normalizedItems, subtotal, discount: numericDiscount, totalAmount: subtotal - numericDiscount, createdBy: req.user!._id }], { session });
       await InventoryMovement.create(stockMovements.map((movement) => ({
         ...movement,
@@ -66,11 +74,11 @@ export const refundSale = catchAsync(async (req: AuthRequest, res: Response) => 
     let sale: any;
     await session.withTransaction(async () => {
       sale = await Sale.findById(req.params.id).session(session);
-      if (!sale) throw Object.assign(new Error('Sale not found'), { statusCode: 404 });
-      if (sale.status === 'refunded') throw new Error('Sale has already been refunded');
+      if (!sale) throw new AppError('Sale not found', 404);
+      if (sale.status === 'refunded') throw new AppError('Sale has already been refunded');
       for (const item of sale.items) {
         const product = await Product.findById(item.product).session(session);
-        if (!product) throw new Error(`Product from sale ${sale.saleNumber} no longer exists`);
+        if (!product) throw new AppError(`Product from sale ${sale.saleNumber} no longer exists`, 404);
         const stockBefore = product.stock;
         product.stock += item.quantity;
         await product.save({ session });
