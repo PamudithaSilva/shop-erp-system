@@ -12,6 +12,7 @@ import saleRoutes from './routes/saleRoutes';
 import dashboardRoutes from './routes/dashboardRoutes';
 import inventoryMovementRoutes from './routes/inventoryMovementRoutes';
 import { ensureAdminUser } from './config/seedAdmin';
+import { AppError } from './utils/AppError';
 
 dotenv.config();
 
@@ -39,9 +40,15 @@ app.use('/api/sales', saleRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/inventory-movements', inventoryMovementRoutes);
 
-app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error(err);
-  res.status(err.statusCode || 500).json({ message: err.message || 'Something went wrong' });
+  if (err instanceof AppError) return res.status(err.statusCode).json({ message: err.message });
+  if (err instanceof Error && err.name === 'ValidationError') return res.status(400).json({ message: err.message });
+  if (err instanceof Error && err.name === 'CastError') return res.status(400).json({ message: 'Invalid resource identifier' });
+  if (typeof err === 'object' && err !== null && 'code' in err && err.code === 11000) {
+    return res.status(409).json({ message: 'A record with those unique values already exists' });
+  }
+  res.status(500).json({ message: 'Something went wrong' });
 });
 
 connectDB().then(async () => {
