@@ -37,8 +37,8 @@ export const protect = async (
 
     const user = await User.findById(decoded.id).select('-password');
 
-    if (!user) {
-      res.status(401).json({ message: 'Not authorized, user not found' });
+    if (!user || !user.isActive) {
+      res.status(401).json({ message: 'Not authorized' });
       return;
     }
 
