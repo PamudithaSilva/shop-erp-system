@@ -28,3 +28,9 @@ npm.cmd run seed:demo
 ```
 
 This adds demo categories, suppliers, customers, products, and sales. Demo products use `DEMO-` SKUs and demo sales use `DEMO-` numbers, so they are easy to identify.
+
+## CI/CD
+
+GitHub Actions validates backend and frontend builds on pull requests and pushes to `main`.
+
+Creating a version tag (for example, `v1.0.0`) or manually running **Release Artifacts** builds production-ready backend and frontend artifacts. The release job uses the GitHub `production` environment, so configure its protection rules in the repository settings before use. Download the resulting artifacts from the workflow run and deploy them to your chosen hosting provider.
