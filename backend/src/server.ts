@@ -25,7 +25,7 @@ const allowedOrigins = [
 
 app.use(helmet());
 app.use(cors({ origin: allowedOrigins, credentials: true }));
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'Shop ERP API is running!' });
@@ -39,6 +39,10 @@ app.use('/api/suppliers', supplierRoutes);
 app.use('/api/sales', saleRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/inventory-movements', inventoryMovementRoutes);
+
+app.use((_req, res) => {
+  res.status(404).json({ message: 'Route not found' });
+});
 
 app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error(err);

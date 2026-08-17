@@ -103,13 +103,14 @@ export const me = async (req: AuthRequest, res: Response): Promise<void> => {
 export const forgotPassword = async (req: Request, res: Response): Promise<void> => {
   try {
     const { email } = req.body;
+    const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
 
-    if (!email) {
+    if (!normalizedEmail) {
       res.status(400).json({ message: 'Email is required' });
       return;
     }
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: normalizedEmail });
     // Always return 200 to avoid user-enumeration attacks
     if (!user) {
       res.json({ message: 'If that email exists, a reset token has been generated.' });
@@ -122,7 +123,9 @@ export const forgotPassword = async (req: Request, res: Response): Promise<void>
     user.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
     await user.save({ validateBeforeSave: false });
 
-    console.log(`[DEV] Password reset token for ${email}: ${rawToken}`);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[DEV] Password reset token for ${normalizedEmail}: ${rawToken}`);
+    }
 
     const response: { message: string; resetToken?: string } = {
       message: 'Reset token generated successfully.',
