@@ -1,4 +1,5 @@
 import mongoose, { Document, Schema } from 'mongoose';
+import { randomBytes } from 'crypto';
 
 interface SaleItem {
   product:     mongoose.Types.ObjectId;
@@ -36,11 +37,10 @@ const SaleSchema = new Schema<ISale>({
   createdBy:   { type: Schema.Types.ObjectId, ref: 'User' },
 }, { timestamps: true });
 
-// Auto-generate sale number
+// Uses a timestamp and random suffix, avoiding duplicate numbers during concurrent sales.
 SaleSchema.pre('save', async function () {
   if (!this.saleNumber) {
-    const count = await mongoose.model('Sale').countDocuments();
-    this.saleNumber = `S-${String(count + 1).padStart(4, '0')}`;
+    this.saleNumber = `S-${Date.now()}-${randomBytes(3).toString('hex').toUpperCase()}`;
   }
 });
 
