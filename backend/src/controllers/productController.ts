@@ -14,6 +14,13 @@ const getEditableProductFields = (body: Record<string, unknown>) =>
     .map((field) => [field, body[field]]));
 
 const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const sortableProductFields = new Set(['name', 'sku', 'price', 'costPrice', 'stock', 'minStock', 'createdAt', 'updatedAt']);
+
+const getProductSort = (sort: unknown) => {
+  if (typeof sort !== 'string') return '-createdAt';
+  const field = sort.replace(/^-/, '');
+  return sortableProductFields.has(field) ? sort : '-createdAt';
+};
 
 export const createProduct = catchAsync(async (req: AuthRequest, res: Response) => {
   const product = await Product.create(req.body);
@@ -57,7 +64,7 @@ export const getProducts = catchAsync(async (req: AuthRequest, res: Response) =>
   }
 
   const products = await Product.find(query)
-    .sort(typeof sort === 'string' && sort.trim() ? sort : '-createdAt')
+    .sort(getProductSort(sort))
     .populate("category", "name")
     .populate("supplier", "name");
   res.status(200).json({ success: true, data: products });

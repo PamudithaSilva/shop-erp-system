@@ -55,7 +55,7 @@ export const createSale = catchAsync(async (req: AuthRequest, res: Response) => 
         normalizedItems.push({ product: product._id, productName: product.name, quantity, unitPrice: product.price, total: product.price * quantity });
       }
       const subtotal = normalizedItems.reduce((total, item) => total + item.total, 0);
-      const numericDiscount = Number(discount) || 0;
+      const numericDiscount = discount === '' || discount === undefined ? 0 : Number(discount);
       if (!Number.isFinite(numericDiscount) || numericDiscount < 0 || numericDiscount > subtotal) throw new AppError('Discount must be between zero and the subtotal');
       [sale] = await Sale.create([{ customer: customer || undefined, items: normalizedItems, subtotal, discount: numericDiscount, totalAmount: subtotal - numericDiscount, createdBy: req.user!._id }], { session });
       await InventoryMovement.create(stockMovements.map((movement) => ({
