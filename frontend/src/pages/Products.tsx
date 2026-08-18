@@ -45,7 +45,7 @@ interface ProductFormState {
 
 interface InventoryMovement {
   _id: string;
-  type: 'opening_balance' | 'sale' | 'refund' | 'adjustment';
+  type: 'opening_balance' | 'sale' | 'refund' | 'purchase_receipt' | 'adjustment';
   quantityChange: number;
   stockBefore: number;
   stockAfter: number;

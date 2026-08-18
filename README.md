@@ -7,6 +7,8 @@ Full-stack shop management ERP built with React, Express, TypeScript, and MongoD
 - JWT authentication with admin/staff permissions
 - Products, categories, suppliers, and customers
 - Stock-aware sales: recording a sale deducts stock; refunds restore it
+- Purchase orders with draft, sent, partial-delivery, received, and cancelled states
+- Receiving supplier deliveries updates stock and preserves a complete inventory audit trail
 - Live dashboard totals, recent sales, and monthly revenue
 
 ## Run locally
