@@ -1,0 +1,11 @@
+import { Router } from 'express';
+import { createPurchaseOrder, listPurchaseOrders, receivePurchaseOrder, updatePurchaseOrderStatus } from '../controllers/purchaseOrderController';
+import { protect } from '../middleware/auth';
+import { permit } from '../middleware/roleMiddleware';
+const router = Router();
+router.use(protect);
+router.get('/', permit('admin', 'staff'), listPurchaseOrders);
+router.post('/', permit('admin'), createPurchaseOrder);
+router.post('/:id/receive', permit('admin'), receivePurchaseOrder);
+router.patch('/:id/status', permit('admin'), updatePurchaseOrderStatus);
+export default router;
