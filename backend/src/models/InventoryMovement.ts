@@ -1,6 +1,6 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
-export type InventoryMovementType = 'opening_balance' | 'sale' | 'refund' | 'adjustment';
+export type InventoryMovementType = 'opening_balance' | 'sale' | 'refund' | 'purchase_receipt' | 'adjustment';
 
 export interface IInventoryMovement extends Document {
   product: mongoose.Types.ObjectId;
@@ -9,19 +9,19 @@ export interface IInventoryMovement extends Document {
   stockBefore: number;
   stockAfter: number;
   reference?: mongoose.Types.ObjectId;
-  referenceType?: 'Sale';
+  referenceType?: 'Sale' | 'PurchaseOrder';
   note?: string;
   createdBy?: mongoose.Types.ObjectId;
 }
 
 const InventoryMovementSchema = new Schema<IInventoryMovement>({
   product: { type: Schema.Types.ObjectId, ref: 'Product', required: true, index: true },
-  type: { type: String, enum: ['opening_balance', 'sale', 'refund', 'adjustment'], required: true },
+  type: { type: String, enum: ['opening_balance', 'sale', 'refund', 'purchase_receipt', 'adjustment'], required: true },
   quantityChange: { type: Number, required: true },
   stockBefore: { type: Number, required: true, min: 0 },
   stockAfter: { type: Number, required: true, min: 0 },
   reference: { type: Schema.Types.ObjectId, refPath: 'referenceType' },
-  referenceType: { type: String, enum: ['Sale'] },
+  referenceType: { type: String, enum: ['Sale', 'PurchaseOrder'] },
   note: { type: String, trim: true, maxlength: 500 },
   createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
 }, { timestamps: true });

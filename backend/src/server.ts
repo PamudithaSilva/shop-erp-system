@@ -11,6 +11,7 @@ import supplierRoutes from './routes/supplierRoutes';
 import saleRoutes from './routes/saleRoutes';
 import dashboardRoutes from './routes/dashboardRoutes';
 import inventoryMovementRoutes from './routes/inventoryMovementRoutes';
+import purchaseOrderRoutes from './routes/purchaseOrderRoutes';
 import { ensureAdminUser } from './config/seedAdmin';
 import { AppError } from './utils/AppError';
 
@@ -39,6 +40,7 @@ app.use('/api/suppliers', supplierRoutes);
 app.use('/api/sales', saleRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/inventory-movements', inventoryMovementRoutes);
+app.use('/api/purchase-orders', purchaseOrderRoutes);
 
 app.use((_req, res) => {
   res.status(404).json({ message: 'Route not found' });
