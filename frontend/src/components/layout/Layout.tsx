@@ -2,7 +2,7 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
   HomeIcon, CubeIcon, TagIcon, TruckIcon,
-  UsersIcon, ShoppingBagIcon, ArrowRightOnRectangleIcon
+  UsersIcon, ShoppingBagIcon, ClipboardDocumentListIcon, ArrowRightOnRectangleIcon
 } from '@heroicons/react/24/outline';
 
 interface NavItem {
@@ -15,6 +15,7 @@ const navItems: NavItem[] = [
   { to: '/dashboard',  icon: HomeIcon,        label: 'Dashboard'  },
   { to: '/products',   icon: CubeIcon,        label: 'Products'   },
   { to: '/sales',      icon: ShoppingBagIcon, label: 'Sales'      },
+  { to: '/purchase-orders', icon: ClipboardDocumentListIcon, label: 'Purchasing' },
   { to: '/customers',  icon: UsersIcon,       label: 'Customers'  },
   { to: '/categories', icon: TagIcon,         label: 'Categories' },
   { to: '/suppliers',  icon: TruckIcon,       label: 'Suppliers'  },

@@ -10,6 +10,7 @@ import Products      from './pages/Products';
 import Sales         from './pages/Sales';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword  from './pages/ResetPassword';
+import PurchaseOrders from './pages/PurchaseOrders';
 
 function Guard({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -36,6 +37,7 @@ export default function App() {
           <Route path="suppliers"  element={<Suppliers />} />
           <Route path="products"   element={<Products />} />
           <Route path="sales"      element={<Sales />} />
+          <Route path="purchase-orders" element={<PurchaseOrders />} />
         </Route>
       </Routes>
     </AuthProvider>
