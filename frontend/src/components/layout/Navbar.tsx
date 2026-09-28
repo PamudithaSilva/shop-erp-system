@@ -41,22 +41,9 @@ export default function Navbar({ onToggleSidebar, onOpenSearch }: NavbarProps) {
 
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
-  const [currentTime, setCurrentTime] = useState<string>('');
 
   const notificationsRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const updateTime = () => {
-      const now = new Date();
-      setCurrentTime(
-        now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      );
-    };
-    updateTime();
-    const timer = setInterval(updateTime, 1000 * 30);
-    return () => clearInterval(timer);
-  }, []);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
