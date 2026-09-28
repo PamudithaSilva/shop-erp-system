@@ -5,13 +5,16 @@ interface ModalProps {
   title: string;
   onClose: () => void;
   children: ReactNode;
-  size?: 'sm' | 'md' | 'lg' | 'xl';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl';
 }
 
 export default function Modal({ title, onClose, children, size = 'md' }: ModalProps) {
   const widths = {
-    sm: 'max-w-sm', md: 'max-w-md',
-    lg: 'max-w-lg', xl: 'max-w-xl'
+    sm: 'max-w-sm',
+    md: 'max-w-md',
+    lg: 'max-w-lg',
+    xl: 'max-w-xl',
+    '2xl': 'max-w-2xl'
   };
 
   useEffect(() => {
@@ -24,25 +27,33 @@ export default function Modal({ title, onClose, children, size = 'md' }: ModalPr
 
   return (
     <div
-      className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
-      onClick={onClose}>
+      className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+    >
       <div
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className={`bg-white rounded-2xl shadow-[0_20px_50px_rgba(24,56,103,0.22)] w-full ${widths[size]} max-h-[90vh] overflow-y-auto`}
-        onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-          <h2 className="font-semibold text-primary-dark">{title}</h2>
+        className={`bg-white rounded-2xl shadow-2xl border border-slate-200/90 w-full ${widths[size]} max-h-[90vh] flex flex-col overflow-hidden`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex-shrink-0">
+          <h2 className="font-bold text-slate-900 text-base tracking-tight">{title}</h2>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close dialog"
-            className="p-1 rounded-lg hover:bg-primary-faint text-slate-400 hover:text-primary">
+            className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+          >
             <XMarkIcon className="w-5 h-5" />
           </button>
         </div>
-        <div className="p-5">{children}</div>
+
+        {/* Content Body */}
+        <div className="p-6 overflow-y-auto flex-1">
+          {children}
+        </div>
       </div>
     </div>
   );
