@@ -3,12 +3,15 @@ import { PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 import api from '../utils/api';
 import Modal from '../components/ui/Modal';
 import toast from 'react-hot-toast';
+import { useAuth } from '../context/AuthContext';
 
 interface Category { _id: string; name: string; description?: string; }
 type CategoryForm = { name: string; description?: string };
 const EMPTY: CategoryForm = { name:'', description:'' };
 
 export default function Categories() {
+  const { user } = useAuth();
+  const canManage = user?.role === 'admin';
   const [data,   setData]   = useState<Category[]>([]);
   const [form,   setForm]   = useState<CategoryForm>(EMPTY);
   const [editId, setEditId] = useState<string | null>(null);
@@ -17,8 +20,8 @@ export default function Categories() {
   const load = () => api.get<Category[]>('/categories').then(r => setData(r.data));
   useEffect(() => { load().catch(() => toast.error('Could not load categories')); }, []);
 
-  const openAdd  = ()             => { setForm(EMPTY); setEditId(null); setModal(true); };
-  const openEdit = (c: Category)  => { setForm(c); setEditId(c._id); setModal(true); };
+  const openAdd  = ()             => { if (canManage) { setForm(EMPTY); setEditId(null); setModal(true); } };
+  const openEdit = (c: Category)  => { if (canManage) { setForm(c); setEditId(c._id); setModal(true); } };
   const f        = (k: string)    => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm(p => ({ ...p, [k]: e.target.value }));
 
@@ -33,39 +36,42 @@ export default function Categories() {
   };
 
   const remove = async (id: string) => {
-    if (!window.confirm('Delete?')) return;
-    await api.delete(`/categories/${id}`);
-    toast.success('Deleted'); load();
+    if (!canManage || !window.confirm('Delete?')) return;
+    try {
+      await api.delete(`/categories/${id}`);
+      toast.success('Deleted');
+      await load();
+    } catch (err: any) { toast.error(err.response?.data?.message || 'Could not delete category'); }
   };
 
   return (
     <div className="p-6 space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-gray-900">Categories</h1>
-        <button className="btn-primary" onClick={openAdd}>
+        {canManage && <button className="btn-primary" onClick={openAdd}>
           <PlusIcon className="w-4 h-4"/> Add Category
-        </button>
+        </button>}
       </div>
 
       <div className="card p-0 overflow-hidden">
         <table className="w-full">
           <thead className="border-b border-gray-100 bg-gray-50">
-            <tr>{['Name','Description',''].map(h => <th key={h} className="th">{h}</th>)}</tr>
+            <tr>{['Name', 'Description', ...(canManage ? [''] : [])].map(h => <th key={h} className="th">{h}</th>)}</tr>
           </thead>
           <tbody>
             {data.length === 0 && (
-              <tr><td colSpan={3} className="td text-center text-gray-400 py-10">No categories yet</td></tr>
+              <tr><td colSpan={canManage ? 3 : 2} className="td text-center text-gray-400 py-10">No categories yet</td></tr>
             )}
             {data.map(c => (
               <tr key={c._id} className="tr">
                 <td className="td font-medium">{c.name}</td>
                 <td className="td text-gray-400">{c.description || '—'}</td>
-                <td className="td">
+                {canManage && <td className="td">
                   <div className="flex gap-1 justify-end">
                     <button onClick={() => openEdit(c)} className="p-1.5 rounded hover:bg-blue-50 text-blue-400"><PencilIcon className="w-4 h-4"/></button>
                     <button onClick={() => remove(c._id)} className="p-1.5 rounded hover:bg-red-50 text-red-400"><TrashIcon className="w-4 h-4"/></button>
                   </div>
-                </td>
+                </td>}
               </tr>
             ))}
           </tbody>
