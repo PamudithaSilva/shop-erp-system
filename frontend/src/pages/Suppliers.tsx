@@ -3,6 +3,7 @@ import { PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 import api from '../utils/api';
 import Modal from '../components/ui/Modal';
 import toast from 'react-hot-toast';
+import { useAuth } from '../context/AuthContext';
 
 interface Supplier {
   _id: string;
@@ -16,6 +17,8 @@ type SupplierForm = { name: string; email?: string; phone?: string; address?: st
 const EMPTY: SupplierForm = { name: '', email: '', phone: '', address: '' };
 
 export default function Suppliers() {
+  const { user } = useAuth();
+  const canManage = user?.role === 'admin';
   const [data,   setData]   = useState<Supplier[]>([]);
   const [form,   setForm]   = useState<SupplierForm>(EMPTY);
   const [editId, setEditId] = useState<string | null>(null);
@@ -24,8 +27,8 @@ export default function Suppliers() {
   const load = () => api.get<Supplier[]>('/suppliers').then(r => setData(r.data));
   useEffect(() => { load().catch(() => toast.error('Could not load suppliers')); }, []);
 
-  const openAdd  = ()              => { setForm(EMPTY); setEditId(null); setModal(true); };
-  const openEdit = (s: Supplier)   => { setForm(s); setEditId(s._id); setModal(true); };
+  const openAdd  = ()              => { if (canManage) { setForm(EMPTY); setEditId(null); setModal(true); } };
+  const openEdit = (s: Supplier)   => { if (canManage) { setForm(s); setEditId(s._id); setModal(true); } };
   const f        = (k: string)     => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm(p => ({ ...p, [k]: e.target.value }));
 
@@ -43,9 +46,12 @@ export default function Suppliers() {
   };
 
   const remove = async (id: string) => {
-    if (!window.confirm('Delete this supplier?')) return;
-    await api.delete(`/suppliers/${id}`);
-    toast.success('Deleted'); load();
+    if (!canManage || !window.confirm('Delete this supplier?')) return;
+    try {
+      await api.delete(`/suppliers/${id}`);
+      toast.success('Deleted');
+      await load();
+    } catch (err: any) { toast.error(err.response?.data?.message || 'Could not delete supplier'); }
   };
 
   return (
@@ -53,16 +59,16 @@ export default function Suppliers() {
 
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-gray-900">Suppliers</h1>
-        <button className="btn-primary" onClick={openAdd}>
+        {canManage && <button className="btn-primary" onClick={openAdd}>
           <PlusIcon className="w-4 h-4"/> Add Supplier
-        </button>
+        </button>}
       </div>
 
       <div className="card p-0 overflow-hidden">
         <table className="w-full">
           <thead className="border-b border-gray-100 bg-gray-50">
             <tr>
-              {['Name', 'Email', 'Phone', 'Address', ''].map(h =>
+              {['Name', 'Email', 'Phone', 'Address', ...(canManage ? [''] : [])].map(h =>
                 <th key={h} className="th">{h}</th>
               )}
             </tr>
@@ -70,7 +76,7 @@ export default function Suppliers() {
           <tbody>
             {data.length === 0 && (
               <tr>
-                <td colSpan={5} className="td text-center text-gray-400 py-10">
+                <td colSpan={canManage ? 5 : 4} className="td text-center text-gray-400 py-10">
                   No suppliers yet
                 </td>
               </tr>
@@ -81,7 +87,7 @@ export default function Suppliers() {
                 <td className="td text-gray-500">{s.email   || '—'}</td>
                 <td className="td text-gray-500">{s.phone   || '—'}</td>
                 <td className="td text-gray-400 text-xs">{s.address || '—'}</td>
-                <td className="td">
+                {canManage && <td className="td">
                   <div className="flex gap-1 justify-end">
                     <button
                       onClick={() => openEdit(s)}
@@ -94,7 +100,7 @@ export default function Suppliers() {
                       <TrashIcon className="w-4 h-4"/>
                     </button>
                   </div>
-                </td>
+                </td>}
               </tr>
             ))}
           </tbody>
