@@ -3,6 +3,7 @@ import { PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 import api from '../utils/api';
 import Modal from '../components/ui/Modal';
 import toast from 'react-hot-toast';
+import { useAuth } from '../context/AuthContext';
 
 interface Customer {
   _id: string; name: string;
@@ -12,6 +13,8 @@ type CustomerForm = { name: string; email?: string; phone?: string; address?: st
 const EMPTY: CustomerForm = { name:'', email:'', phone:'', address:'' };
 
 export default function Customers() {
+  const { user } = useAuth();
+  const canDelete = user?.role === 'admin';
   const [data,   setData]   = useState<Customer[]>([]);
   const [form,   setForm]   = useState<CustomerForm>(EMPTY);
   const [editId, setEditId] = useState<string | null>(null);
@@ -37,9 +40,12 @@ export default function Customers() {
   };
 
   const remove = async (id: string) => {
-    if (!window.confirm('Delete this customer?')) return;
-    await api.delete(`/customers/${id}`);
-    toast.success('Deleted'); load();
+    if (!canDelete || !window.confirm('Delete this customer?')) return;
+    try {
+      await api.delete(`/customers/${id}`);
+      toast.success('Deleted');
+      await load();
+    } catch (err: any) { toast.error(err.response?.data?.message || 'Could not delete customer'); }
   };
 
   return (
@@ -76,10 +82,10 @@ export default function Customers() {
                       className="p-1.5 rounded hover:bg-blue-50 text-blue-400">
                       <PencilIcon className="w-4 h-4"/>
                     </button>
-                    <button onClick={() => remove(c._id)}
+                    {canDelete && <button onClick={() => remove(c._id)}
                       className="p-1.5 rounded hover:bg-red-50 text-red-400">
                       <TrashIcon className="w-4 h-4"/>
-                    </button>
+                    </button>}
                   </div>
                 </td>
               </tr>
