@@ -9,7 +9,6 @@ import {
   UsersIcon,
   TagIcon,
   TruckIcon,
-  PlusIcon,
   XMarkIcon,
   SparklesIcon
 } from '@heroicons/react/24/outline';
@@ -49,7 +48,7 @@ export default function QuickSearchModal({ isOpen, onClose }: QuickSearchModalPr
       category: 'Navigation',
       icon: CubeIcon,
       to: '/products',
-      description: 'Manage items, stock levels, barcodes, and pricing'
+      description: 'Manage items, stock levels, and pricing'
     },
     {
       id: 'sales',
@@ -57,7 +56,7 @@ export default function QuickSearchModal({ isOpen, onClose }: QuickSearchModalPr
       category: 'Navigation',
       icon: ShoppingBagIcon,
       to: '/sales',
-      description: 'Create point of sale transactions and view receipts'
+      description: 'Create point of sale transactions and view sales'
     },
     {
       id: 'purchases',
@@ -73,7 +72,7 @@ export default function QuickSearchModal({ isOpen, onClose }: QuickSearchModalPr
       category: 'Navigation',
       icon: UsersIcon,
       to: '/customers',
-      description: 'Customer profiles, loyalty, and contact history'
+      description: 'Customer names and contact details'
     },
     {
       id: 'categories',
@@ -90,22 +89,6 @@ export default function QuickSearchModal({ isOpen, onClose }: QuickSearchModalPr
       icon: TruckIcon,
       to: '/suppliers',
       description: 'Vendor directory and supply contacts'
-    },
-    {
-      id: 'new-sale',
-      title: 'Record New Sale',
-      category: 'Actions',
-      icon: PlusIcon,
-      to: '/sales',
-      description: 'Launch checkout register'
-    },
-    {
-      id: 'new-product',
-      title: 'Add New Product',
-      category: 'Actions',
-      icon: PlusIcon,
-      to: '/products',
-      description: 'Register a new stock inventory item'
     }
   ];
 
@@ -162,6 +145,9 @@ export default function QuickSearchModal({ isOpen, onClose }: QuickSearchModalPr
       onClick={onClose}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Quick search"
         className="w-full max-w-xl bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
@@ -169,6 +155,7 @@ export default function QuickSearchModal({ isOpen, onClose }: QuickSearchModalPr
         <div className="flex items-center px-4 py-3.5 border-b border-slate-100 bg-slate-50/50">
           <MagnifyingGlassIcon className="w-5 h-5 text-primary mr-3 flex-shrink-0" />
           <input
+            aria-label="Search pages"
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
