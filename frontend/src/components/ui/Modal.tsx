@@ -1,4 +1,4 @@
-import { ReactNode, useEffect } from 'react';
+import { ReactNode, useEffect, useRef } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 
 interface ModalProps {
@@ -9,6 +9,9 @@ interface ModalProps {
 }
 
 export default function Modal({ title, onClose, children, size = 'md' }: ModalProps) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
   const widths = {
     sm: 'max-w-sm',
     md: 'max-w-md',
@@ -18,12 +21,22 @@ export default function Modal({ title, onClose, children, size = 'md' }: ModalPr
   };
 
   useEffect(() => {
+    const previousFocus = document.activeElement as HTMLElement | null;
+    const dialog = dialogRef.current;
+    const focusable = () => Array.from(dialog?.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])') || []);
+    (focusable()[0] || dialog)?.focus();
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
+      if (event.key === 'Escape') closeRef.current();
+      if (event.key !== 'Tab') return;
+      const elements = focusable();
+      if (!elements.length) { event.preventDefault(); dialog?.focus(); return; }
+      const first = elements[0], last = elements[elements.length - 1];
+      if (event.shiftKey && (document.activeElement === first || !dialog?.contains(document.activeElement))) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && (document.activeElement === last || !dialog?.contains(document.activeElement))) { event.preventDefault(); first.focus(); }
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => { document.removeEventListener('keydown', handleKeyDown); previousFocus?.focus(); };
+  }, []);
 
   return (
     <div
@@ -31,6 +44,8 @@ export default function Modal({ title, onClose, children, size = 'md' }: ModalPr
       onClick={onClose}
     >
       <div
+        ref={dialogRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-label={title}
