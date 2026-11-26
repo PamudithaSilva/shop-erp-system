@@ -20,11 +20,20 @@ const csvCell = (value: string | number) => `"${String(value).replace(/"/g, '""'
 export default function Dashboard() {
   const [stats, setStats] = useState<Stats | null>(null);
 
-  useEffect(() => {
-    api.get<Stats>('/dashboard/stats').then((response) => setStats(response.data)).catch(() => toast.error('Could not load dashboard'));
-  }, []);
+  const [loadError, setLoadError] = useState(false);
+  const [attempt, setAttempt] = useState(0);
 
-  if (!stats) return <div className="flex h-full items-center justify-center"><div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>;
+  useEffect(() => {
+    let active = true;
+    setLoadError(false);
+    api.get<Stats>('/dashboard/stats')
+      .then((response) => { if (active) setStats(response.data); })
+      .catch(() => { if (active) setLoadError(true); });
+    return () => { active = false; };
+  }, [attempt]);
+
+  if (loadError) return <div className="p-6 md:p-8"><div role="alert" className="card p-6 max-w-lg"><h1 className="text-lg font-bold text-slate-900">Dashboard unavailable</h1><p className="mt-2 text-slate-600">We couldn't load your shop overview. Check your connection and try again.</p><button className="btn-primary mt-4" onClick={() => setAttempt((value) => value + 1)}>Try again</button></div></div>;
+  if (!stats) return <div role="status" className="p-8 text-slate-500">Loading dashboard...</div>;
 
   const downloadReport = () => {
     const generatedAt = new Date();
@@ -69,8 +78,8 @@ export default function Dashboard() {
       <div><h1 className="text-2xl font-bold text-slate-900">Dashboard</h1><p className="mt-1 text-sm text-slate-500">A clear view of your shop performance.</p></div>
       <button className="btn-primary" onClick={downloadReport}><ArrowDownTrayIcon className="w-4 h-4" /> Download Report</button>
     </div>
-    <div className="rounded-2xl bg-gradient-to-r from-primary-dark to-primary p-6 text-white shadow-[0_14px_30px_rgba(36,95,169,0.24)] flex justify-between"><div><p className="text-blue-100 text-sm">Total Revenue</p><p className="mt-1 text-3xl font-bold">LKR {stats.totalRevenue.toLocaleString()}</p></div><div className="text-right"><p className="text-blue-100 text-sm">This Month</p><p className="mt-1 text-xl font-semibold">LKR {stats.monthRevenue.toLocaleString()}</p></div></div>
+    <div className="rounded-2xl bg-gradient-to-r from-primary-dark to-primary p-6 text-white shadow-[0_14px_30px_rgba(36,95,169,0.24)] flex flex-wrap gap-4 justify-between"><div><p className="text-blue-100 text-sm">Total Revenue</p><p className="mt-1 text-3xl font-bold">LKR {stats.totalRevenue.toLocaleString()}</p></div><div className="text-right"><p className="text-blue-100 text-sm">This Month</p><p className="mt-1 text-xl font-semibold">LKR {stats.monthRevenue.toLocaleString()}</p></div></div>
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">{kpis.map(([label, value, Icon, color, background]) => <div className="card p-4" key={label}><div className={`w-10 h-10 rounded-xl ${background} flex items-center justify-center mb-3`}><Icon className={`w-5 h-5 ${color}`} /></div><p className={`text-2xl font-bold ${color}`}>{value}</p><p className="mt-1 text-xs text-slate-500">{label}</p></div>)}</div>
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6"><div className="card p-5"><h2 className="text-sm font-semibold text-slate-800 mb-4">Monthly Revenue</h2><ResponsiveContainer width="100%" height={200}><BarChart data={stats.monthlySales}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="_id" /><YAxis /><Tooltip formatter={(value) => [`LKR ${Number(value || 0).toLocaleString()}`, 'Revenue']} /><Bar dataKey="revenue" fill="#245fa9" /></BarChart></ResponsiveContainer></div><div className="card p-5"><h2 className="text-sm font-semibold text-slate-800 mb-3">Recent Sales</h2><table className="w-full"><thead><tr>{['Sale #', 'Customer', 'Amount', 'Status'].map((heading) => <th className="th !px-0" key={heading}>{heading}</th>)}</tr></thead><tbody>{stats.recentSales.map((sale) => <tr className="border-t border-slate-100" key={sale._id}><td className="py-2 text-xs">{sale.saleNumber}</td><td className="py-2 text-xs">{sale.customer?.name || 'Walk-in'}</td><td className="py-2 text-xs">LKR {sale.totalAmount.toLocaleString()}</td><td><span className={`badge ${sale.status === 'completed' ? 'badge-green' : 'badge-red'}`}>{sale.status}</span></td></tr>)}</tbody></table></div></div>
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6"><div className="card p-5"><h2 className="text-sm font-semibold text-slate-800 mb-4">Monthly Revenue</h2><ResponsiveContainer width="100%" height={200}><BarChart data={stats.monthlySales}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="_id" /><YAxis /><Tooltip formatter={(value) => [`LKR ${Number(value || 0).toLocaleString()}`, 'Revenue']} /><Bar dataKey="revenue" fill="#245fa9" /></BarChart></ResponsiveContainer></div><div className="card p-5"><h2 className="text-sm font-semibold text-slate-800 mb-3">Recent Sales</h2><div className="overflow-x-auto"><table className="w-full min-w-[450px]"><thead><tr>{['Sale #', 'Customer', 'Amount', 'Status'].map((heading) => <th className="th !px-0" key={heading}>{heading}</th>)}</tr></thead><tbody>{stats.recentSales.map((sale) => <tr className="border-t border-slate-100" key={sale._id}><td className="py-2 text-xs">{sale.saleNumber}</td><td className="py-2 text-xs">{sale.customer?.name || 'Walk-in'}</td><td className="py-2 text-xs">LKR {sale.totalAmount.toLocaleString()}</td><td><span className={`badge ${sale.status === 'completed' ? 'badge-green' : 'badge-red'}`}>{sale.status}</span></td></tr>)}</tbody></table>{stats.recentSales.length === 0 && <p className="py-6 text-center text-sm text-slate-500">No sales recorded yet.</p>}</div></div></div>
   </div>;
 }
