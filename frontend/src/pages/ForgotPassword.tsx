@@ -16,7 +16,7 @@ export default function ForgotPassword() {
     try {
       const { data } = await api.post('/auth/forgot-password', { email });
       setResetToken(data.resetToken ?? null);
-      toast.success('Reset token generated!');
+      toast.success(data.message);
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Something went wrong');
     } finally {
