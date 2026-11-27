@@ -52,7 +52,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
     const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
     const user = await User.findOne({ email: normalizedEmail });
-    if (!user || !user.isActive || !(await user.comparePassword(password))) {
+    if (typeof password !== 'string' || !user || !user.isActive || !(await user.comparePassword(password))) {
       res.status(401).json({ message: 'Invalid credentials' });
       return;
     }
@@ -128,7 +128,7 @@ export const forgotPassword = async (req: Request, res: Response): Promise<void>
     }
 
     const response: { message: string; resetToken?: string } = {
-      message: 'Reset token generated successfully.',
+      message: 'If that email exists, a reset token has been generated.',
     };
     if (process.env.NODE_ENV !== 'production') response.resetToken = rawToken;
     res.json(response);
@@ -148,7 +148,7 @@ export const resetPassword = async (req: Request, res: Response): Promise<void> 
   try {
     const { token, password } = req.body;
 
-    if (!token || !password) {
+    if (typeof token !== 'string' || typeof password !== 'string' || !token || !password) {
       res.status(400).json({ message: 'Token and new password are required' });
       return;
     }
