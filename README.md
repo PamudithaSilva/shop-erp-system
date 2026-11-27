@@ -20,6 +20,10 @@ Full-stack shop management ERP built with React, Express, TypeScript, and MongoD
 
 The first backend launch creates the configured administrator if it does not already exist.
 
+Sales, refunds, and purchase receipts use MongoDB transactions. MongoDB must run as a replica set or sharded cluster; a standalone server cannot process these operations.
+
+Password reset tokens are exposed only in development. Production email delivery is not implemented, so users cannot reset passwords through the application in production until a delivery service is configured and integrated.
+
 ## Demo data
 
 After MongoDB is reachable, add safe-to-rerun sample data with:
