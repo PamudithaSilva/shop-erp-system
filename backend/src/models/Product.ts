@@ -16,12 +16,12 @@ export interface IProduct extends Document {
 
 const ProductSchema = new Schema<IProduct>({
   name:        { type: String, required: true, trim: true },
-  sku:         { type: String, unique: true, sparse: true },
+  sku:         { type: String, unique: true, sparse: true, set: (value: unknown) => typeof value === 'string' ? value.trim() || undefined : value },
   description: { type: String, default: '' },
   price:       { type: Number, required: true, min: 0 },
-  costPrice:   { type: Number, default: 0 },
+  costPrice:   { type: Number, default: 0, min: 0 },
   stock:       { type: Number, default: 0, min: 0 },
-  minStock:    { type: Number, default: 5 },
+  minStock:    { type: Number, default: 5, min: 0 },
   unit:        { type: String, default: 'pcs' },
   category:    { type: Schema.Types.ObjectId, ref: 'Category' },
   supplier:    { type: Schema.Types.ObjectId, ref: 'Supplier' },

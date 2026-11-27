@@ -43,6 +43,7 @@ export const receivePurchaseOrder = catchAsync(async (req: AuthRequest, res: Res
   const quantities = new Map<string, number>();
   for (const item of items) {
     if (!mongoose.isObjectIdOrHexString(item?.productId)) throw new AppError('Each received item must be valid');
+    if (quantities.has(item.productId)) throw new AppError('Each received product must appear only once');
     const quantity = Number(item.quantity); if (!Number.isFinite(quantity) || quantity < 0) throw new AppError('Received quantities cannot be negative');
     quantities.set(item.productId, quantity);
   }
@@ -74,8 +75,13 @@ export const receivePurchaseOrder = catchAsync(async (req: AuthRequest, res: Res
 export const updatePurchaseOrderStatus = catchAsync(async (req: AuthRequest, res: Response) => {
   const status = req.body.status as PurchaseOrderStatus;
   if (!['draft', 'ordered', 'cancelled'].includes(status)) throw new AppError('Invalid order status');
-  const order = await PurchaseOrder.findById(req.params.id);
-  if (!order) throw new AppError('Purchase order not found', 404);
-  if (order.status === 'received' || order.status === 'partially_received') throw new AppError('Received orders cannot be changed this way');
-  order.status = status; await order.save(); res.json(await populateOrder(order));
+  const order = await PurchaseOrder.findOneAndUpdate(
+    { _id: req.params.id, status: { $in: ['draft', 'ordered'] } },
+    { status }, { new: true, runValidators: true }
+  );
+  if (!order) {
+    if (!await PurchaseOrder.exists({ _id: req.params.id })) throw new AppError('Purchase order not found', 404);
+    throw new AppError('This order can no longer be changed this way');
+  }
+  res.json(await populateOrder(order));
 });
